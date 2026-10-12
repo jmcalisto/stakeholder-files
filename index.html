@@ -1,0 +1,852 @@
+<title>The Stakeholder Files</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@400;500;600;700&family=Libre+Baskerville:wght@400;700&display=swap">
+<style>
+/* Layout: one fixed 1920×1080 game-show stage, scaled to fit; left gate panel + 5-column level board with gates between columns; clue/score screens zoom over it. Single dark broadcast look by design. */
+:root{
+  color-scheme: dark;
+  --void:#03101a;          /* letterbox + studio dark */
+  --stage:#06192a;         /* board backdrop */
+  --tile:#1c5a78;          /* the teal from the planning diagram */
+  --tile-hi:#2675a0;
+  --tile-deep:#0d3550;
+  --line:#3a86ad;
+  --gold:#f6c64e;          /* Jeopardy value gold */
+  --gold-deep:#b9861b;
+  --orange:#ef7a2e;        /* path arrows from the diagram */
+  --ink:#eef5f8;
+  --muted:#8fb3c6;
+  --good:#35c983;
+  --bad:#ee4d5c;
+  --f-display:"Anton","Impact","Haettenschweiler","Arial Narrow Bold",sans-serif;
+  --f-label:"Barlow Condensed","Arial Narrow","Roboto Condensed",sans-serif;
+  --f-body:"Barlow","Segoe UI",system-ui,sans-serif;
+  --f-clue:"Libre Baskerville","Georgia","Times New Roman",serif;
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--void);color:var(--ink);font-family:var(--f-body);overflow:hidden;margin:0}
+#app{position:fixed;inset:0;background:var(--void);overflow:hidden}
+#stage{
+  position:absolute;left:50%;top:50%;width:1920px;height:1080px;
+  transform-origin:50% 50%;
+  background:
+    radial-gradient(1200px 600px at 50% -10%, rgba(38,117,160,.35), transparent 70%),
+    radial-gradient(900px 500px at 15% 110%, rgba(239,122,46,.10), transparent 70%),
+    var(--stage);
+  overflow:hidden;
+  box-shadow:0 0 0 1px rgba(255,255,255,.04);
+}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,.tile:focus-visible{outline:4px solid var(--gold);outline-offset:4px}
+
+/* ---------- Top bar ---------- */
+.topbar{position:absolute;left:0;right:0;top:0;height:96px;display:flex;align-items:center;gap:32px;padding:0 48px;
+  background:linear-gradient(180deg,rgba(3,16,26,.9),rgba(3,16,26,.4));border-bottom:2px solid rgba(58,134,173,.35)}
+.brand{display:flex;align-items:baseline;gap:16px}
+.brand b{font-family:var(--f-display);font-size:40px;letter-spacing:.04em;color:var(--gold);font-weight:400;text-shadow:3px 3px 0 #000}
+.brand span{font-family:var(--f-label);font-weight:600;font-size:20px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted)}
+.progress{display:flex;gap:10px;margin-left:auto;align-items:center}
+.progress .dot{width:58px;height:14px;border-radius:3px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);transition:background .4s}
+.progress .dot.on{background:var(--orange);box-shadow:0 0 14px rgba(239,122,46,.7)}
+.progress .dot.ok{background:var(--good)}
+.progress .dot.no{background:var(--bad)}
+.scorebox{display:flex;align-items:center;gap:14px;padding:6px 22px;border-radius:8px;background:#000;border:2px solid var(--gold-deep);box-shadow:inset 0 0 18px rgba(246,198,78,.15)}
+.scorebox small{font-family:var(--f-label);font-size:18px;letter-spacing:.25em;color:var(--muted);font-weight:600}
+.scorebox .num{font-family:var(--f-display);font-size:48px;color:var(--gold);font-variant-numeric:tabular-nums;min-width:84px;text-align:right;line-height:1}
+.scorebox .of{font-family:var(--f-label);font-size:24px;color:var(--muted);font-weight:600}
+.iconbtn{width:56px;height:56px;border-radius:10px;border:2px solid rgba(143,179,198,.35);background:rgba(13,53,80,.6);display:grid;place-items:center;transition:background .2s,border-color .2s}
+.iconbtn:hover{background:var(--tile);border-color:var(--gold)}
+.iconbtn svg{width:28px;height:28px;stroke:var(--ink);fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- Main board ---------- */
+#main{position:absolute;left:48px;right:48px;top:120px;bottom:30px}
+.gate1{position:absolute;left:0;top:250px;width:330px;height:520px;border-radius:6px;
+  background:linear-gradient(160deg,var(--tile-hi),var(--tile) 55%,var(--tile-deep));
+  border:3px solid #0a2433;box-shadow:0 18px 40px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.15);
+  display:flex;flex-direction:column;padding:30px 28px;gap:16px;transition:box-shadow .4s,border-color .4s}
+.gate1.live{border-color:var(--orange);box-shadow:0 0 0 4px rgba(239,122,46,.25),0 0 50px rgba(239,122,46,.35),0 18px 40px rgba(0,0,0,.45)}
+.gate1 .eyebrow{font-family:var(--f-label);font-weight:700;font-size:20px;letter-spacing:.28em;color:var(--orange);text-transform:uppercase}
+.gate1 h2{margin:0;font-family:var(--f-body);font-weight:600;font-size:44px;line-height:1.12;text-wrap:balance}
+.gate1 .cat{font-family:var(--f-label);font-weight:700;font-size:30px;line-height:1.1;color:var(--gold);text-transform:uppercase;letter-spacing:.03em}
+.gate1 .ladder{margin-top:auto;display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.gate1 .ladder div{text-align:center;padding:8px 0;border-radius:4px;background:rgba(3,16,26,.45);font-family:var(--f-display);font-size:26px;color:var(--gold);line-height:1}
+.gate1 .ladder div small{display:block;font-family:var(--f-label);font-size:13px;letter-spacing:.12em;color:var(--muted);margin-top:4px;font-weight:600}
+.gate1 .hint{font-size:17px;color:var(--muted);line-height:1.4}
+.gate1 .hint kbd{font-family:var(--f-label);font-weight:700;background:rgba(3,16,26,.6);border:1px solid rgba(143,179,198,.4);border-radius:4px;padding:1px 7px;color:var(--ink)}
+
+#board{position:absolute;left:372px;right:0;top:0;bottom:0;display:grid;
+  grid-template-columns:1fr 38px 1fr 38px 1fr 38px 1fr 38px 1fr;
+  grid-template-rows:118px repeat(5,1fr);column-gap:12px;row-gap:16px}
+.colhead{display:flex;flex-direction:column;justify-content:flex-end;gap:4px;padding:0 4px 10px;border-bottom:3px solid rgba(58,134,173,.35);transition:border-color .4s,opacity .4s}
+.colhead small{font-family:var(--f-label);font-weight:600;font-size:17px;letter-spacing:.28em;color:var(--muted);text-transform:uppercase}
+.colhead b{font-family:var(--f-label);font-weight:800;font-size:31px;line-height:1.02;text-transform:uppercase;letter-spacing:.02em;text-wrap:balance}
+.colhead.active{border-color:var(--orange)}
+.colhead.active small{color:var(--orange)}
+.colhead.future{opacity:.55}
+
+.cell{display:flex;gap:6px;position:relative;z-index:2;min-width:0}
+.tile{flex:1;min-width:0;position:relative;border:none;border-radius:4px;padding:0;
+  background:linear-gradient(165deg,var(--tile-hi),var(--tile) 55%,var(--tile-deep));
+  box-shadow:inset 0 0 0 3px #0a2433, inset 0 2px 0 3px rgba(255,255,255,.08), 0 8px 18px rgba(0,0,0,.4);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  transition:transform .18s ease, filter .3s, opacity .3s, box-shadow .2s}
+.tile .lv{font-family:var(--f-label);font-weight:700;font-size:17px;letter-spacing:.3em;color:rgba(238,245,248,.75);text-transform:uppercase}
+.tile .val{font-family:var(--f-display);font-size:66px;line-height:1;color:var(--gold);text-shadow:4px 4px 0 #000;letter-spacing:.01em}
+.tile .val sup{font-family:var(--f-label);font-size:18px;letter-spacing:.15em;vertical-align:top;margin-left:4px;text-shadow:2px 2px 0 #000;position:relative;top:8px}
+.pips{width:42px;display:flex;flex-direction:column;gap:6px}
+.pip{flex:1;border-radius:3px;background:var(--tile-deep);border:2px solid #0a2433;display:grid;place-items:center;transition:background .35s, box-shadow .35s}
+.pip svg{width:20px;height:20px;stroke:rgba(143,179,198,.45);stroke-width:3.2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.pip.lit-ok{background:var(--good);box-shadow:0 0 18px rgba(53,201,131,.7)}
+.pip.lit-no{background:var(--bad);box-shadow:0 0 18px rgba(238,77,92,.7)}
+.pip.lit-ok svg,.pip.lit-no svg{stroke:#fff}
+
+.cell.future .tile{filter:saturate(.4) brightness(.55)}
+.cell.future .pips{opacity:.45}
+.cell.active .tile{cursor:pointer}
+.cell.active .tile:hover,.cell.active .tile:focus-visible{transform:translateY(-4px) scale(1.035);box-shadow:inset 0 0 0 3px var(--gold), 0 0 0 3px rgba(246,198,78,.25), 0 14px 30px rgba(0,0,0,.5)}
+.cell.active{animation:breathe 2.4s ease-in-out infinite}
+.cell.active:nth-child(odd){animation-delay:.25s}
+@keyframes breathe{0%,100%{filter:brightness(1)}50%{filter:brightness(1.12)}}
+.cell.cleared .tile{background:var(--tile-deep);box-shadow:inset 0 0 0 3px #0a2433;opacity:.55}
+.cell.cleared .tile .val,.cell.cleared .tile .lv{visibility:hidden}
+.cell.cleared .pips{opacity:.35}
+.cell.picked .tile{cursor:default}
+.cell.picked.ok .tile{box-shadow:inset 0 0 0 3px var(--good),0 0 26px rgba(53,201,131,.35)}
+.cell.picked.no .tile{box-shadow:inset 0 0 0 3px var(--bad),0 0 26px rgba(238,77,92,.3)}
+.cell.picked.no .tile .val{color:rgba(246,198,78,.4);text-decoration:line-through;text-decoration-thickness:5px;text-decoration-color:var(--bad)}
+
+.gate{grid-row:2 / 7;position:relative;z-index:2;border-radius:4px;display:grid;place-items:center;
+  background:linear-gradient(180deg,var(--tile),var(--tile-deep));border:2px solid #0a2433;transition:border-color .4s, box-shadow .4s, opacity .4s}
+.gate span{writing-mode:vertical-rl;transform:rotate(180deg);font-family:var(--f-label);font-weight:700;font-size:17px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.gate.live{border-color:var(--orange);box-shadow:0 0 30px rgba(239,122,46,.5)}
+.gate.live span{color:var(--ink)}
+.gate.done span{color:rgba(143,179,198,.4)}
+.gate.future{opacity:.5}
+
+#paths{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;overflow:visible}
+#paths .rail{stroke:rgba(239,122,46,.13);stroke-width:6;fill:none}
+#paths .trail-under{stroke:#1b0b02;stroke-width:15;fill:none;stroke-linejoin:round}
+#paths .trail{stroke:var(--orange);stroke-width:9;fill:none;stroke-linejoin:round}
+#paths .draw{animation:draw 1s ease-out forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+#paths .stub{stroke:var(--orange);stroke-width:9;fill:none;stroke-dasharray:4 18;stroke-linecap:round;animation:march 1s linear infinite}
+@keyframes march{to{stroke-dashoffset:-22}}
+#paths .node{fill:var(--orange);stroke:#1b0b02;stroke-width:4}
+#paths .node.pulse{animation:pulse 1.4s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+@keyframes pulse{50%{transform:scale(1.5);opacity:.6}}
+
+/* ---------- Overlays (title, clue, end) ---------- */
+.overlay{position:absolute;inset:0;z-index:20}
+#clue{transform-origin:0 0;background:
+   radial-gradient(1100px 500px at 50% 0%, rgba(58,134,173,.45), transparent 70%),
+   linear-gradient(180deg,#0c3754,#071f33 70%,#05172a);
+  display:flex;flex-direction:column;padding:56px 90px 50px;gap:0;
+  box-shadow:inset 0 0 0 10px #0a2433, inset 0 0 0 14px rgba(246,198,78,.35)}
+#clue.zooming{transition:transform .65s cubic-bezier(.2,.8,.2,1), border-radius .65s}
+#clue .inner{display:flex;flex-direction:column;height:100%;opacity:0;transition:opacity .35s .35s}
+#clue.open .inner{opacity:1}
+.clue-head{display:flex;align-items:center;gap:24px}
+.clue-head .cat{font-family:var(--f-label);font-weight:800;font-size:38px;text-transform:uppercase;color:var(--gold);letter-spacing:.04em}
+.clue-head .gate-no{font-family:var(--f-label);font-weight:700;font-size:20px;letter-spacing:.3em;color:var(--orange);text-transform:uppercase}
+.clue-head .worth{margin-left:auto;display:flex;align-items:center;gap:14px;padding:8px 22px;border:2px solid var(--gold-deep);border-radius:40px;background:rgba(0,0,0,.35)}
+.clue-head .worth b{font-family:var(--f-display);font-size:40px;color:var(--gold);line-height:1;font-weight:400}
+.clue-head .worth span{font-family:var(--f-label);font-weight:700;font-size:20px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase}
+.question{flex:1;display:grid;place-items:center;padding:20px 40px}
+.question p{margin:0;font-family:var(--f-clue);font-weight:700;font-size:54px;line-height:1.3;text-transform:uppercase;text-align:center;text-shadow:4px 4px 0 #000;text-wrap:balance;max-width:1560px;letter-spacing:.01em}
+.question p.long{font-size:46px}
+.answers{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:22px 70px;padding:0 10px}
+.answers::before{content:"";position:absolute;left:-90px;right:-90px;top:50%;height:3px;background:linear-gradient(90deg,transparent,rgba(246,198,78,.45) 8%,rgba(246,198,78,.45) 92%,transparent);z-index:0}
+.answers.two::before{display:none}
+.ans{position:relative;z-index:1;border:none;background:transparent;padding:0;height:108px;text-align:left}
+.ans .frame{position:absolute;inset:0;clip-path:polygon(34px 0,calc(100% - 34px) 0,100% 50%,calc(100% - 34px) 100%,34px 100%,0 50%);background:linear-gradient(90deg,#8b6a1d,var(--gold),#8b6a1d);transition:background .25s}
+.ans .fill{position:absolute;inset:3px;clip-path:polygon(32px 0,calc(100% - 32px) 0,100% 50%,calc(100% - 32px) 100%,32px 100%,0 50%);
+  background:linear-gradient(180deg,#0e2f4c,#04121f 55%,#0a2740);display:flex;align-items:center;gap:20px;padding:0 54px;transition:background .25s}
+.ans .key{font-family:var(--f-display);font-size:38px;color:var(--orange);flex:none;line-height:1}
+.ans .txt{font-family:var(--f-body);font-weight:600;font-size:29px;line-height:1.18;color:var(--ink)}
+.ans:not([disabled]):hover .fill{background:linear-gradient(180deg,#1c5a78,#0d3550)}
+.ans.sel .frame{background:#fff}
+.ans.sel .fill{background:linear-gradient(180deg,#f59a4f,var(--orange) 55%,#c75916)}
+.ans.sel .key{color:#fff}
+.ans.right .frame{background:#d8ffe9}
+.ans.right .fill{background:linear-gradient(180deg,#5ae3a2,var(--good) 55%,#1d9a5f);animation:flash .35s 3}
+.ans.right .key,.ans.wrong .key{color:#fff}
+.ans.wrong .frame{background:#ffd6da}
+.ans.wrong .fill{background:linear-gradient(180deg,#ff7c88,var(--bad) 55%,#b52634)}
+.ans.dim{opacity:.38}
+.ans[disabled]{cursor:default}
+.ans.suspense .fill{animation:suspense .5s ease-in-out infinite alternate}
+@keyframes suspense{to{filter:brightness(1.35)}}
+@keyframes flash{50%{filter:brightness(1.6)}}
+.clue-foot{height:210px;margin-top:34px;position:relative}
+.lockin{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:28px}
+.lockin p{margin:0;font-family:var(--f-label);font-weight:600;font-size:24px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
+.bigbtn{border:none;border-radius:60px;padding:22px 54px;font-family:var(--f-label);font-weight:800;font-size:32px;letter-spacing:.14em;text-transform:uppercase;
+  background:linear-gradient(180deg,#ffd978,var(--gold) 50%,var(--gold-deep));color:#2a1a00;box-shadow:0 6px 0 #6d4d0b,0 14px 30px rgba(0,0,0,.4);transition:transform .12s, filter .2s, opacity .2s}
+.bigbtn:hover{filter:brightness(1.08)}
+.bigbtn:active{transform:translateY(4px);box-shadow:0 2px 0 #6d4d0b,0 8px 20px rgba(0,0,0,.4)}
+.bigbtn[disabled]{opacity:.3;cursor:default;filter:none;transform:none}
+.bigbtn.ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 3px rgba(143,179,198,.5)}
+.verdict{position:absolute;inset:0;display:flex;align-items:stretch;gap:36px;padding:26px 36px;border-radius:14px;background:rgba(2,12,20,.72);border:2px solid rgba(143,179,198,.25);transform:translateY(30px);opacity:0;transition:transform .45s cubic-bezier(.2,.8,.2,1),opacity .35s}
+.verdict{pointer-events:none}
+.verdict.show{transform:none;opacity:1;pointer-events:auto}
+.verdict .badge{flex:none;width:260px;display:flex;flex-direction:column;justify-content:center;align-items:center;border-radius:10px;gap:4px}
+.verdict.ok .badge{background:linear-gradient(160deg,#4fe0a0,#1d9a5f)}
+.verdict.no .badge{background:linear-gradient(160deg,#ff7c88,#b52634)}
+.verdict .badge b{font-family:var(--f-display);font-size:70px;line-height:1;color:#fff;text-shadow:3px 3px 0 rgba(0,0,0,.35);font-weight:400}
+.verdict .badge span{font-family:var(--f-label);font-weight:800;font-size:24px;letter-spacing:.2em;text-transform:uppercase;color:#fff}
+.verdict .why{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:10px}
+.verdict .why small{font-family:var(--f-label);font-weight:700;font-size:19px;letter-spacing:.3em;color:var(--orange);text-transform:uppercase}
+.verdict .why p{margin:0;font-size:27px;line-height:1.38;color:var(--ink);max-width:62ch}
+.verdict .why p em{font-style:normal;color:var(--gold);font-weight:600}
+.verdict .go{flex:none;align-self:center}
+
+/* Title */
+#title{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;text-align:center;background:radial-gradient(1200px 700px at 50% 40%, #0d3a58, #041423 70%)}
+.beams{position:absolute;inset:-40%;pointer-events:none;background:
+  conic-gradient(from 200deg at 30% 100%, transparent 0deg, rgba(246,198,78,.10) 6deg, transparent 12deg, transparent 30deg, rgba(239,122,46,.08) 36deg, transparent 42deg),
+  conic-gradient(from 130deg at 70% 100%, transparent 0deg, rgba(246,198,78,.10) 6deg, transparent 12deg, transparent 28deg, rgba(58,134,173,.16) 34deg, transparent 40deg);
+  animation:sweep 9s ease-in-out infinite alternate}
+@keyframes sweep{to{transform:rotate(6deg) translateY(-2%)}}
+#title .kicker{position:relative;font-family:var(--f-label);font-weight:700;font-size:26px;letter-spacing:.5em;text-transform:uppercase;color:var(--orange);margin-bottom:10px}
+#title h1{position:relative;margin:0;font-family:var(--f-display);font-weight:400;font-size:178px;line-height:.92;letter-spacing:.02em;color:var(--gold);
+  text-shadow:0 2px 0 #c99a2a,0 4px 0 #a97c18,0 6px 0 #8a630f,0 8px 0 #5a3f07,0 22px 40px rgba(0,0,0,.6)}
+#title h1 span{display:block;font-size:96px;color:var(--ink);text-shadow:0 2px 0 #9fb8c6,0 4px 0 #5f7f92,0 6px 0 #2f4c5e,0 18px 30px rgba(0,0,0,.6);letter-spacing:.08em}
+#title .lede{position:relative;margin:34px 0 0;font-size:31px;line-height:1.4;color:var(--muted);max-width:38ch;text-wrap:balance}
+.rules{position:relative;display:flex;gap:22px;margin:46px 0 48px}
+.rule{width:380px;text-align:left;padding:22px 26px;border-radius:8px;background:linear-gradient(165deg,var(--tile-hi),var(--tile) 60%,var(--tile-deep));box-shadow:inset 0 0 0 3px #0a2433,0 10px 24px rgba(0,0,0,.4);display:flex;gap:18px;align-items:flex-start}
+.rule b{font-family:var(--f-display);font-weight:400;font-size:46px;white-space:nowrap;color:var(--gold);line-height:1;text-shadow:3px 3px 0 #000;flex:none;min-width:58px}
+.rule p{margin:0;font-size:22px;line-height:1.35}
+.rule p strong{color:var(--gold);font-weight:700}
+.cats-strip{position:relative;display:flex;gap:14px;margin-top:40px}
+.cats-strip span{font-family:var(--f-label);font-weight:700;font-size:20px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);padding:8px 16px;border:1px solid rgba(143,179,198,.3);border-radius:30px}
+
+/* End */
+#end{background:radial-gradient(1200px 700px at 50% 30%, #0d3a58, #041423 70%);display:flex;flex-direction:column;align-items:center;padding:64px 90px 54px}
+#end .kicker{font-family:var(--f-label);font-weight:700;font-size:24px;letter-spacing:.5em;text-transform:uppercase;color:var(--orange);position:relative}
+.final{position:relative;display:flex;align-items:baseline;gap:18px;margin-top:6px}
+.final b{font-family:var(--f-display);font-weight:400;font-size:220px;line-height:1;color:var(--gold);font-variant-numeric:tabular-nums;text-shadow:0 3px 0 #c99a2a,0 6px 0 #8a630f,0 10px 0 #5a3f07,0 26px 50px rgba(0,0,0,.6)}
+.final span{font-family:var(--f-display);font-size:70px;color:var(--muted)}
+.rank{position:relative;font-family:var(--f-label);font-weight:800;font-size:56px;text-transform:uppercase;letter-spacing:.06em;margin-top:6px}
+.rank-sub{position:relative;font-size:26px;color:var(--muted);margin:8px 0 0;max-width:60ch;text-align:center;line-height:1.4}
+.recap{position:relative;display:grid;grid-template-columns:repeat(5,1fr);gap:18px;width:100%;margin-top:44px}
+.rc{border-radius:8px;padding:20px 22px;background:linear-gradient(165deg,var(--tile),var(--tile-deep));box-shadow:inset 0 0 0 3px #0a2433;display:flex;flex-direction:column;gap:8px;min-width:0}
+.rc.ok{box-shadow:inset 0 0 0 3px var(--good)}
+.rc.no{box-shadow:inset 0 0 0 3px var(--bad)}
+.rc small{font-family:var(--f-label);font-weight:600;font-size:16px;letter-spacing:.25em;color:var(--muted);text-transform:uppercase}
+.rc h3{margin:0;font-family:var(--f-label);font-weight:800;font-size:26px;text-transform:uppercase;line-height:1.05;min-height:56px}
+.rc .row{display:flex;align-items:baseline;justify-content:space-between;margin-top:auto}
+.rc .row span{font-family:var(--f-label);font-weight:700;font-size:20px;letter-spacing:.15em;text-transform:uppercase}
+.rc .row b{font-family:var(--f-display);font-weight:400;font-size:46px;color:var(--gold);line-height:1}
+.rc.no .row b{color:rgba(246,198,78,.4)}
+.rc p{margin:0;font-size:17px;line-height:1.35;color:var(--muted)}
+.end-actions{position:relative;display:flex;gap:22px;margin-top:auto}
+
+/* reveal flash */
+#flash{position:absolute;inset:0;z-index:40;pointer-events:none;opacity:0}
+#flash.ok{background:radial-gradient(circle at 50% 50%, rgba(53,201,131,.35), transparent 60%);animation:fl .7s ease-out}
+#flash.no{background:radial-gradient(circle at 50% 50%, rgba(238,77,92,.35), transparent 60%);animation:fl .7s ease-out}
+@keyframes fl{0%{opacity:1}100%{opacity:0}}
+.shake{animation:shake .45s}
+@keyframes shake{20%{transform:translateX(-14px)}40%{transform:translateX(12px)}60%{transform:translateX(-8px)}80%{transform:translateX(5px)}}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition-duration:.01ms!important;transition-delay:0s!important}
+}
+</style>
+
+<div id="app">
+  <div id="stage" role="application" aria-label="The Stakeholder Files quiz">
+    <header class="topbar">
+      <div class="brand"><b>THE STAKEHOLDER FILES</b><span>The Quiz</span></div>
+      <div class="progress" id="progress" aria-label="Progress"></div>
+      <div class="scorebox" aria-live="polite"><small>SCORE</small><span class="num" id="score">0</span><span class="of">/ 200</span></div>
+      <button class="iconbtn" id="btnMusic" title="Music on/off" aria-label="Toggle music"></button>
+      <button class="iconbtn" id="btnSound" title="Sound on/off" aria-label="Toggle sound"></button>
+      <button class="iconbtn" id="btnRestart" title="Restart" aria-label="Restart game"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+      <button class="iconbtn" id="btnFull" title="Full screen (F)" aria-label="Toggle full screen"></button>
+    </header>
+
+    <section id="main">
+      <div class="gate1" id="gatePanel"></div>
+      <div id="board"></div>
+      <svg id="paths" aria-hidden="true">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#ef7a2e" stroke="#1b0b02" stroke-width="1"/>
+          </marker>
+        </defs>
+        <g id="rails"></g><g id="trail"></g>
+      </svg>
+    </section>
+
+    <section class="overlay" id="title">
+      <div class="beams"></div>
+      <div class="kicker">The Quiz</div>
+      <h1>THE STAKEHOLDER<span>FILES</span></h1>
+      <p class="lede">Five categories. Five gates. At every gate you choose how hard your next question gets.</p>
+      <div class="rules">
+        <div class="rule"><b>1–5</b><p>At each gate, <strong>pick a level</strong>. Level 1 is the warm-up, Level 5 is the hardest question in the file.</p></div>
+        <div class="rule"><b>8–40</b><p>A correct answer is worth <strong>8 points per level</strong>: 8 at Level 1, up to 40 at Level 5. A wrong answer scores 0.</p></div>
+        <div class="rule"><b>200</b><p>Clear all five gates at Level 5 for a <strong>perfect 200</strong>. Then the path moves you on, right or wrong.</p></div>
+      </div>
+      <button class="bigbtn" id="btnStart">Open the files</button>
+      <div class="cats-strip" id="catsStrip"></div>
+    </section>
+
+    <section class="overlay" id="clue" hidden></section>
+    <section class="overlay" id="end" hidden></section>
+    <div id="flash"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ===== Content: The Stakeholder Files — answer key ===== */
+const CATS = [
+ { name:"Who Holds the Cards", qs:[
+  {q:"In the Power/Interest matrix, someone with high power but low interest sits in this quadrant.", o:["Manage Closely", "Keep Satisfied", "Keep Informed", "Monitor"], a:1,
+   r:"Keep Satisfied is for high power, low interest — they can affect outcomes but aren't watching closely, so you keep them content without overloading them with detail."},
+  {q:"Someone has real informal influence but no line on the org chart. Which quadrant do people usually (wrongly) file them into?", o:["Manage Closely", "Keep Satisfied", "Keep Informed", "Monitor"], a:3,
+   r:"No formal line reads as low power, so people default to Monitor — missing that real influence often sits outside the org chart entirely."},
+  {q:"Formal authority and real influence are:", o:["Always the same thing", "Often quite different", "Legally required to match", "Only different in large companies"], a:1,
+   r:"This is the whole premise of the programme: a job title tells you almost nothing about who people actually defer to."},
+  {q:"Which of these is the best signal of someone's real power, beyond their job title?", o:["How often they email you", "Who defers to them or quietly seeks their sign-off", "How senior their title sounds", "How many meetings they attend"], a:1,
+   r:"Deference is behavioural evidence — people don't quietly seek someone's sign-off unless that sign-off actually matters to them."},
+  {q:"Which Power/Interest quadrant gets the least attention by default — and is exactly where people get blindsided from?", o:["Manage Closely", "Keep Satisfied", "Keep Informed", "Monitor"], a:3,
+   r:"Monitor is built for people who are genuinely low power and low interest — so it's the one quadrant you deliberately give the least attention. The danger is when someone's been placed there by mistake: if they actually hold more power than you assumed, you've stopped watching exactly the person capable of surprising you."}
+ ]},
+ { name:"What Makes Them Tick", qs:[
+  {q:"Cohen and Bradford's model is called influence without this.", o:["Authority", "Emotion", "Data", "Consequence"], a:0,
+   r:"“Influence Without Authority” is the model's actual name — built for exactly the situation most supply chain roles face: needing cooperation from people you don't formally manage."},
+  {q:"Which of these is one of Cohen and Bradford's five currencies?", o:["Task-related resources", "Job title", "Email frequency", "Seniority"], a:0,
+   r:"Task-related resources is one of the five currencies (alongside inspiration, position, relationship, and personal). The other options aren't currencies at all in this model."},
+  {q:"What someone says matters to them and what they're actually measured on can differ. Which should you trust more?", o:["What they say in meetings", "What they're measured on / rewarded for", "Their job title", "Their LinkedIn headline"], a:1,
+   r:"People often say what sounds good in the room. What they're actually rewarded for is what predicts their real behaviour."},
+  {q:"What's usually a better source of someone's real motivation than asking them directly?", o:["Their email signature", "What they push on, protect, or get chased for", "Their years of tenure", "Their department budget"], a:1,
+   r:"Behaviour under pressure is harder to fake than a stated answer — what someone protects or gets chased for reveals what actually matters to them."},
+  {q:"Why is it risky to assume someone's LinkedIn headline tells you what drives them?", o:["LinkedIn is often outdated", "It's curated self-presentation, not evidence of real pressure", "Headlines are limited to one line", "Most people don't update it"], a:1,
+   r:"A headline is written to be seen, not to be accurate about day-to-day pressure — useful as a clue, not as proof."}
+ ]},
+ { name:"Who's In My Corner", qs:[
+  {q:"The person who emails the most is usually the most influential.", o:["True", "False"], a:1,
+   r:"Email volume measures visibility, not influence — it's easy to mistake the loudest person in the room for the most powerful one."},
+  {q:"Which of these is a signal that someone trusts a colleague more than their job title suggests?", o:["They cc them on every email", "They quietly seek their sign-off before big decisions", "They share an office with them", "They have the same manager"], a:1,
+   r:"Seeking sign-off costs the person time and exposes them to disagreement — they only do it for people whose judgement they genuinely trust."},
+  {q:"A quiet, low-authority person is often privately trusted by senior leaders because of:", o:["Their job title", "Long tenure and credibility earned over time", "How often they speak in meetings", "Their formal reporting line"], a:1,
+   r:"Trust built over years of being reliably right doesn't show up on an org chart, but it's often more durable than any formal title."},
+  {q:"What's the main risk of only mapping the formal reporting line?", o:["It takes too long", "You miss who can quietly block or unblock you", "It's hard to draw", "It ignores job titles"], a:1,
+   r:"The formal line shows who's accountable on paper — not who actually has to be satisfied for something to move forward."},
+  {q:"A stakeholder is new to their role and leans hard on one colleague behind the scenes. What's the smart move?", o:["Ignore the colleague, focus only on the stakeholder", "Build a relationship with that colleague too", "Wait until the stakeholder settles into the role", "Escalate to their manager"], a:1,
+   r:"If your stakeholder leans on someone else for cover, that colleague is effectively a second decision-maker — worth investing in directly."}
+ ]},
+ { name:"Winning Them Over", qs:[
+  {q:"In Cohen and Bradford's terms, what you offer someone to gain their cooperation is called a:", o:["Currency", "Contract", "Credit", "Concession"], a:0,
+   r:"Currency is the model's term for anything you can offer that the other person genuinely values — the whole model is about trading currencies, not issuing demands."},
+  {q:"The same pitch works for every stakeholder, regardless of what they're measured on.", o:["True", "False"], a:1,
+   r:"A pitch only lands if it's framed around what that specific person is measured on or pressured by — a generic pitch ignores the whole point of doing the fact-find."},
+  {q:"Someone's biggest pressure is defending decisions to auditors. What should you lead with?", o:["Speed and urgency", "A clean paper trail or evidence", "A personal favour", "A deadline"], a:1,
+   r:"Speak to their actual pressure. If audit defensibility is what keeps them up at night, evidence is the currency that earns their yes — urgency just adds risk for them."},
+  {q:"Why does bringing a fast decision to someone who values certainty over speed often backfire?", o:["It's rude", "It asks them to trade away what they actually value", "It takes too much of their time", "It skips protocol"], a:1,
+   r:"You're asking them to sacrifice the thing they care about most (certainty) for the thing you care about (speed) — a bad trade from their side of the table."},
+  {q:"You learn a stakeholder depends heavily on a colleague you haven't spoken to. What should change?", o:["Nothing, stay focused on the stakeholder", "Build a relationship with that colleague too", "Report this to your manager", "Avoid the colleague to prevent conflict"], a:1,
+   r:"That colleague has informal influence over your stakeholder's decision — ignoring them means ignoring a real part of the path to a yes."}
+ ]},
+ { name:"Spot the Trap", qs:[
+  {q:"Someone's job title is enough to judge how much power they actually have.", o:["True", "False"], a:1,
+   r:"Job titles describe formal scope, not real influence — this whole quiz exists because that gap catches people out constantly."},
+  {q:"Someone talks confidently and dominates every meeting. What should you check first?", o:["Whether their confidence is backed by track record, or covering for unfamiliarity", "How long the meeting lasted", "Whether they used PowerPoint", "Their job title"], a:0,
+   r:"Confidence is a delivery style, not evidence of competence — it can come from genuine expertise or from covering for being new to the role."},
+  {q:"A stakeholder is new to their sector after years in a different one. What's the risk of taking their confidence at face value?", o:["None, confidence is a reliable signal", "They may be applying an old playbook to a job needing different fundamentals", "They're probably lying", "They'll need more training budget"], a:1,
+   r:"Skills from a previous sector don't automatically transfer — confident language can mask genuine gaps in operational fundamentals they haven't built yet."},
+  {q:"Why is a quiet, low-email colleague easy to misjudge?", o:["They're usually new to the company", "Low visible activity gets mistaken for low influence", "They probably dislike email", "They're likely junior"], a:1,
+   r:"Visibility and influence aren't the same thing — someone with earned trust often doesn't need to broadcast to be heard."},
+  {q:"What's the biggest giveaway that someone's real influence exceeds their formal authority?", o:["They have a large team", "Other people defer to them on decisions that aren't formally theirs", "They attend many meetings", "They have a senior-sounding title"], a:1,
+   r:"Deference on decisions outside someone's formal remit is the clearest behavioural evidence that real influence has outgrown their job title."}
+ ]}
+];
+const PTS = l => l*8;                // Level 1..5 → 8..40, perfect run = 200
+const MAX = 200;
+const WORDS = ["One","Two","Three","Four","Five"];
+const KEYS = ["A","B","C","D"];
+
+/* ===== State ===== */
+let S = fresh();
+function fresh(){ return { phase:"title", col:0, picks:[], score:0, sel:null, locked:false }; }
+
+const $ = s => document.querySelector(s);
+const stage = $("#stage"), board = $("#board"), main = $("#main");
+
+/* ===== Stage scaling + fullscreen ===== */
+function fit(){
+  const app = $("#app");
+  const s = Math.min(app.clientWidth/1920, app.clientHeight/1080);
+  stage.style.transform = `translate(-50%,-50%) scale(${s})`;
+}
+addEventListener("resize", fit);
+const ICON_FULL = '<svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
+const ICON_EXIT = '<svg viewBox="0 0 24 24"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>';
+function isFull(){ return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+function setFullIcon(){ $("#btnFull").innerHTML = isFull() ? ICON_EXIT : ICON_FULL; }
+async function toggleFull(){
+  try{
+    if(isFull()){ (document.exitFullscreen||document.webkitExitFullscreen).call(document); }
+    else{ const el=$("#app"); await (el.requestFullscreen||el.webkitRequestFullscreen).call(el); }
+  }catch(e){ /* fullscreen not available in this view */ }
+}
+document.addEventListener("fullscreenchange", ()=>{ setFullIcon(); fit(); });
+document.addEventListener("webkitfullscreenchange", ()=>{ setFullIcon(); fit(); });
+$("#btnFull").addEventListener("click", toggleFull);
+setFullIcon();
+
+/* ===== Sound (synthesised, starts on first click) ===== */
+let AC=null, muted=false;
+const ICON_SND = '<svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>';
+const ICON_MUTE = '<svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l5 6M22 9l-5 6"/></svg>';
+function setSndIcon(){ $("#btnSound").innerHTML = muted?ICON_MUTE:ICON_SND; }
+$("#btnSound").addEventListener("click", ()=>{ muted=!muted; setSndIcon(); refreshMusicVolume(); try{localStorage.setItem("sf-muted",muted?"1":"0")}catch(e){} });
+try{ muted = localStorage.getItem("sf-muted")==="1"; }catch(e){}
+setSndIcon();
+function ac(){ if(!AC){ try{ AC=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } if(AC&&AC.state==="suspended") AC.resume(); return AC; }
+function tone(f,d,type="sine",v=.14,t0=0,f2){
+  if(muted) return; const c=ac(); if(!c) return;
+  const t=c.currentTime+t0, o=c.createOscillator(), g=c.createGain();
+  o.type=type; o.frequency.setValueAtTime(f,t); if(f2) o.frequency.exponentialRampToValueAtTime(f2,t+d);
+  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(v,t+.015); g.gain.exponentialRampToValueAtTime(.0001,t+d);
+  o.connect(g).connect(c.destination); o.start(t); o.stop(t+d+.05);
+}
+const SFX = {
+  tick(){ tone(880,.06,"triangle",.08); },
+  pick(){ tone(392,.35,"triangle",.12,0,784); tone(587,.4,"sine",.06,.08,1175); },
+  lock(){ tone(98,1.3,"sawtooth",.05); tone(147,1.3,"triangle",.07); tone(196,.2,"square",.04,.0); tone(196,.2,"square",.04,.6); },
+  right(){ [523,659,784,1047].forEach((f,i)=>tone(f,.45,"triangle",.13,i*.09)); tone(1568,.6,"sine",.05,.36); },
+  wrong(){ tone(165,.55,"sawtooth",.1); tone(156,.6,"square",.06,.02); tone(110,.7,"sawtooth",.08,.25); },
+  fanfare(){ [392,523,659,784,659,784,1047].forEach((f,i)=>tone(f,.5,"triangle",.11,i*.12)); }
+};
+
+
+/* ===== Music: original game-show score, synthesised live (no audio files, no licensing) =====
+   Moods: "board" = calm bed while choosing a gate; "clue" = a simple tick-tock clock, the same for
+   every question; "lock" = one soft held chord under Final answer; then silence for the reveal. */
+let musicOn=true;
+try{ musicOn = localStorage.getItem("sf-music")!=="0"; }catch(e){}
+const ICON_MUS = '<svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>';
+const ICON_MUS_OFF = '<svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/><path d="M3 3l18 18"/></svg>';
+function setMusIcon(){ $("#btnMusic").innerHTML = musicOn?ICON_MUS:ICON_MUS_OFF; $("#btnMusic").setAttribute("aria-pressed", musicOn?"true":"false"); }
+const M = { bus:null, mode:null, level:1, step:0, next:0, timer:null, noise:null };
+function musBus(){
+  const c=ac(); if(!c) return null;
+  if(!M.bus){
+    M.bus=c.createGain(); M.bus.gain.value=0;
+    const comp=c.createDynamicsCompressor(); comp.threshold.value=-18; comp.ratio.value=4;
+    M.bus.connect(comp).connect(c.destination);
+    const len=c.sampleRate*0.2, buf=c.createBuffer(1,len,c.sampleRate), d=buf.getChannelData(0);
+    for(let i=0;i<len;i++) d[i]=Math.random()*2-1; M.noise=buf;
+  }
+  return M.bus;
+}
+function musLevel(){ return (muted||!musicOn)?0:0.55; }
+function busTo(v,secs=.6){ const c=ac(), b=musBus(); if(!b) return; b.gain.cancelScheduledValues(c.currentTime); b.gain.setTargetAtTime(v,c.currentTime,secs/3); }
+const N = n => 440*Math.pow(2,(n-69)/12);      // MIDI → Hz
+// A minor drama: Am – F – Dm – E (each one bar of 16 steps)
+const PROG = [
+  {bass:45, ch:[57,60,64], arp:[69,72,76,72]},
+  {bass:41, ch:[57,60,65], arp:[69,72,77,72]},
+  {bass:38, ch:[57,62,65], arp:[69,74,77,74]},
+  {bass:40, ch:[56,59,64], arp:[68,71,76,71]}
+];
+function v(type,f,t,d,vol,{cut=2000,q=1,att=.005,rel,f2,det=0}={}){
+  const c=AC, o=c.createOscillator(), g=c.createGain(), fl=c.createBiquadFilter();
+  o.type=type; o.frequency.setValueAtTime(f,t); if(det) o.detune.value=det; if(f2) o.frequency.exponentialRampToValueAtTime(f2,t+d);
+  fl.type="lowpass"; fl.frequency.value=cut; fl.Q.value=q;
+  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(vol,t+att);
+  g.gain.setTargetAtTime(0.0001,t+(rel??att),(d)/3);
+  o.connect(fl).connect(g).connect(M.bus); o.start(t); o.stop(t+d*1.6+.1);
+}
+function pad(notes,t,d,vol){ notes.forEach(n=>{ v("sawtooth",N(n),t,d,vol,{cut:700,att:d*.35,rel:d*.6,det:-7}); v("sawtooth",N(n),t,d,vol,{cut:700,att:d*.35,rel:d*.6,det:7}); }); }
+function woodblock(t,f,vol){
+  v("sine",f,t,.05,vol,{cut:6000,att:.001,rel:.004});
+  const c=AC,src=c.createBufferSource(),g=c.createGain(),fl=c.createBiquadFilter();
+  src.buffer=M.noise; fl.type="bandpass"; fl.frequency.value=f*1.4; fl.Q.value=6;
+  g.gain.setValueAtTime(vol*.8,t); g.gain.exponentialRampToValueAtTime(.0001,t+.03);
+  src.connect(fl).connect(g).connect(M.bus); src.start(t); src.stop(t+.05);
+}
+function kick(t,vol){ v("sine",120,t,.35,vol,{f2:42,cut:400,att:.003}); }
+function hat(t,vol){ const c=AC,s=c.createBufferSource(),g=c.createGain(),fl=c.createBiquadFilter(); s.buffer=M.noise; fl.type="highpass"; fl.frequency.value=7000; g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(.0001,t+.05); s.connect(fl).connect(g).connect(M.bus); s.start(t); s.stop(t+.08); }
+function stepDur(){ return M.mode==="board" ? 60/84/4 : 0.25; }
+function schedule(step,t){
+  const bar=Math.floor(step/16)%4, s=step%16, P=PROG[bar], sd=stepDur(), L=M.level;
+  if(M.mode==="board"){
+    if(s===0){ pad(P.ch,t,sd*16,.035); v("triangle",N(P.bass),t,sd*16,.16,{cut:500,att:.4,rel:sd*12}); }
+    if(s%4===2) v("triangle",N(P.arp[(s/4|0)%4]),t,sd*3,.045,{cut:1800});
+    if(s===0||s===8) v("sine",N(P.bass+12),t,.4,.05,{cut:800});
+    return;
+  }
+  if(M.mode==="clue"){
+    // just a clock: tick … tock, one per second, same for every question
+    if(s%4===0){
+      const tick=(step/4)%2===0;
+      woodblock(t, tick?2100:1500, tick?.11:.08);
+    }
+  }
+}
+function pump(){
+  if(!M.mode||!AC) return;
+  while(M.next < AC.currentTime+.15){ schedule(M.step,M.next); M.next+=stepDur(); M.step++; }
+}
+function setMusic(mode,level){
+  const c=ac(); if(!c||!musBus()) return;
+  if(mode===M.mode && level===M.level) return;
+  clearInterval(M.timer); M.timer=null;
+  if(!mode){ M.mode=null; busTo(0,.5); return; }
+  if(mode==="lock"){
+    M.mode=null; busTo(musLevel(),.05);
+    const t=c.currentTime+.02;
+    // one soft held chord while the answer is checked
+    [57,64].forEach((n,i)=>v("sine",N(n),t,1.3,.06,{cut:1200,att:.5,rel:1,det:i*4}));
+    return;
+  }
+  M.mode=mode; M.level=level||1; M.step=0; M.next=c.currentTime+.08;
+  busTo(musLevel(),.8);
+  M.timer=setInterval(pump,25); pump();
+}
+function refreshMusicVolume(){ if(M.bus) busTo(M.mode?musLevel():0,.2); }
+
+/* ===== Build board ===== */
+function buildBoard(){
+  board.innerHTML="";
+  // headers
+  CATS.forEach((c,i)=>{
+    const h=document.createElement("div"); h.className="colhead"; h.id="h"+i;
+    h.style.gridColumn=(i*2+1); h.style.gridRow=1;
+    h.innerHTML=`<small>Category ${i+1}</small><b>${c.name}</b>`;
+    board.appendChild(h);
+  });
+  // gates 2..5
+  for(let g=1; g<5; g++){
+    const el=document.createElement("div"); el.className="gate"; el.id="gt"+g;
+    el.style.gridColumn=g*2;
+    el.innerHTML=`<span>Question ${WORDS[g]} · choose level 1–5</span>`;
+    board.appendChild(el);
+  }
+  // tiles
+  const pipSvg = {
+    ok:'<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+    no:'<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>'
+  };
+  for(let c=0;c<5;c++) for(let l=1;l<=5;l++){
+    const cell=document.createElement("div"); cell.className="cell"; cell.id=`c${c}l${l}`;
+    cell.style.gridColumn=c*2+1; cell.style.gridRow=l+1;
+    cell.innerHTML=`<button class="tile" data-c="${c}" data-l="${l}" aria-label="${CATS[c].name}, level ${l}, ${PTS(l)} points">
+        <span class="lv">Level ${l}</span><span class="val">${PTS(l)}<sup>PTS</sup></span></button>
+      <div class="pips"><div class="pip" data-k="ok" title="Correct">${pipSvg.ok}</div><div class="pip" data-k="no" title="Incorrect">${pipSvg.no}</div></div>`;
+    board.appendChild(cell);
+  }
+  board.addEventListener("click", e=>{
+    const t=e.target.closest(".tile"); if(!t) return;
+    const c=+t.dataset.c, l=+t.dataset.l;
+    if(S.phase==="board" && c===S.col) choose(l, t);
+  });
+  $("#catsStrip").innerHTML = CATS.map(c=>`<span>${c.name}</span>`).join("");
+}
+
+/* ===== Render board state ===== */
+function render(){
+  // progress dots
+  $("#progress").innerHTML = CATS.map((_,i)=>{
+    const p=S.picks[i]; const cls = p ? (p.correct?"ok":"no") : (i===S.col && S.phase!=="end" ? "on":"");
+    return `<div class="dot ${cls}" title="Category ${i+1}"></div>`;
+  }).join("");
+  // headers
+  CATS.forEach((_,i)=>{ const h=$("#h"+i); h.className="colhead"+(i===S.col&&S.phase!=="end"?" active":"")+(i>S.col?" future":""); });
+  // gates
+  for(let g=1; g<5; g++){ const el=$("#gt"+g); el.className="gate"+(g===S.col&&S.phase!=="end"?" live":g<S.col?" done":g>S.col?" future":""); }
+  // tiles
+  for(let c=0;c<5;c++) for(let l=1;l<=5;l++){
+    const cell=$(`#c${c}l${l}`), p=S.picks[c], btn=cell.querySelector(".tile");
+    let cls="cell";
+    if(p){ cls += p.level===l ? (" picked "+(p.correct?"ok":"no")) : " cleared"; }
+    else if(c===S.col && S.phase==="board") cls+=" active";
+    else if(c>S.col || c===S.col) cls+=" future";
+    cell.className=cls;
+    btn.tabIndex = (c===S.col && S.phase==="board" && !p) ? 0 : -1;
+    cell.querySelectorAll(".pip").forEach(pip=>{
+      pip.className="pip"+(p&&p.level===l ? (p.correct&&pip.dataset.k==="ok"?" lit-ok":(!p.correct&&pip.dataset.k==="no"?" lit-no":"")) : "");
+    });
+  }
+  renderGate1();
+  drawPaths();
+}
+function renderGate1(){
+  const g=$("#gatePanel");
+  const done = S.col>=5;
+  g.className="gate1"+(S.col===0&&S.phase==="board"?" live":"");
+  if(done){
+    g.innerHTML=`<div class="eyebrow">Path complete</div><h2>All five gates cleared</h2><div class="cat">${S.score} of 200</div>`;
+    return;
+  }
+  const remaining = (5-S.col)*40;
+  g.innerHTML = `
+    <div class="eyebrow">Gate ${S.col+1} of 5</div>
+    <h2>Question ${WORDS[S.col]}, choose level 1, 2, 3, 4, 5</h2>
+    <div class="cat">${CATS[S.col].name}</div>
+    <div class="hint">Click a tile or press <kbd>1</kbd>–<kbd>5</kbd>. Up to <b style="color:var(--gold)">${remaining}</b> points still on the board.</div>
+    <div class="ladder">${[1,2,3,4,5].map(l=>`<div>${PTS(l)}<small>L${l}</small></div>`).join("")}</div>`;
+}
+
+/* ===== Orange path (SVG) ===== */
+function rel(el){
+  // offset relative to #main, unaffected by stage scale
+  let x=0,y=0,n=el;
+  while(n && n!==main){ x+=n.offsetLeft; y+=n.offsetTop; n=n.offsetParent; }
+  return {x,y,w:el.offsetWidth,h:el.offsetHeight};
+}
+function gateX(c){
+  if(c===0){ const g=rel($("#gatePanel")), b=rel(board); return (g.x+g.w + b.x)/2; }
+  const g=rel($("#gt"+c)); return g.x+g.w/2;
+}
+let drawnSegs=0;
+function drawPaths(animateLast){
+  const svg=$("#paths"), rails=$("#rails"), trail=$("#trail");
+  const m=rel(main); svg.setAttribute("viewBox",`0 0 ${main.offsetWidth} ${main.offsetHeight}`);
+  // faint lane rails — one per level, like the planning diagram
+  let r="";
+  const g1=rel($("#gatePanel"));
+  for(let l=1;l<=5;l++){
+    const a=rel($(`#c0l${l}`)), b=rel($(`#c4l${l}`));
+    const y=a.y+a.h*0.82;
+    r+=`<path class="rail" d="M${a.x+20} ${y} H${b.x+b.w-30}"/>`;
+  }
+  rails.innerHTML=r;
+  // the player's trail
+  let html="", px=g1.x+g1.w, py=g1.y+g1.h/2;
+  html+=`<circle class="node" cx="${px}" cy="${py}" r="9"/>`;
+  S.picks.forEach((p,c)=>{
+    const t=rel($(`#c${c}l${p.level}`).querySelector(".tile"));
+    const cell=rel($(`#c${c}l${p.level}`));
+    const gx=gateX(c), ty=t.y+t.h/2;
+    const d=`M${px} ${py} H${gx} V${ty} H${t.x-6}`;
+    const len=Math.abs(gx-px)+Math.abs(ty-py)+Math.abs(t.x-6-gx);
+    const anim = animateLast && c===S.picks.length-1;
+    const style = anim ? `style="stroke-dasharray:${len};stroke-dashoffset:${len}"` : "";
+    html+=`<path class="trail-under ${anim?'draw':''}" ${style} d="${d}"/>`;
+    html+=`<path class="trail ${anim?'draw':''}" ${style} d="${d}" marker-end="url(#arrow)"/>`;
+    px=cell.x+cell.w+4; py=ty;
+    html+=`<circle class="node" cx="${px}" cy="${py}" r="8"/>`;
+  });
+  // live stub towards the next gate
+  if(S.phase==="board" && S.col<5){
+    const gx=gateX(S.col);
+    html+=`<path class="stub" d="M${px+10} ${py} H${gx}"/>`;
+    html+=`<circle class="node pulse" cx="${gx}" cy="${py}" r="10"/>`;
+  }
+  trail.innerHTML=html;
+}
+
+/* ===== Flow ===== */
+function start(){
+  ac(); SFX.pick(); setMusic("board");
+  S=fresh(); S.phase="board"; setScore(0,true);
+  $("#title").hidden=true; $("#end").hidden=true; $("#clue").hidden=true;
+  render();
+  setTimeout(()=>{ const f=board.querySelector(".cell.active .tile"); if(f) f.focus({preventScroll:true}); },50);
+}
+
+function choose(level, tileEl){
+  if(S.phase!=="board") return;
+  clearTimeout(shrinkTimer);
+  S.phase="clue"; S.level=level; S.sel=null; S.locked=false;
+  SFX.pick(); setMusic("clue", level);
+  const q=CATS[S.col].qs[level-1];
+  const clue=$("#clue");
+  const two = q.o.length===2;
+  clue.innerHTML=`
+   <div class="inner">
+    <div class="clue-head">
+      <div><div class="gate-no">Gate ${S.col+1} of 5 · Question ${WORDS[S.col]}</div><div class="cat">${CATS[S.col].name}</div></div>
+      <div class="worth"><span>Level ${level}</span><b>${PTS(level)}</b><span>pts</span></div>
+    </div>
+    <div class="question"><p class="${q.q.length>110?'long':''}">${q.q}</p></div>
+    <div class="answers ${two?'two':''}">
+      ${q.o.map((o,i)=>`<button class="ans" data-i="${i}" id="ans${i}"><span class="frame"></span><span class="fill"><span class="key">${KEYS[i]}:</span><span class="txt">${o}</span></span></button>`).join("")}
+    </div>
+    <div class="clue-foot">
+      <div class="lockin" id="lockin"><p id="lockHint">Pick an answer, then lock it in</p><button class="bigbtn" id="btnLock" disabled>Final answer</button></div>
+      <div class="verdict" id="verdict"></div>
+    </div>
+   </div>`;
+  clue.querySelectorAll(".ans").forEach(b=>b.addEventListener("click",()=>select(+b.dataset.i)));
+  $("#btnLock").addEventListener("click", lockIn);
+
+  // Jeopardy zoom from the tile
+  const st=stage.getBoundingClientRect(), tr=tileEl.getBoundingClientRect(), k=st.width/1920;
+  const x=(tr.left-st.left)/k, y=(tr.top-st.top)/k, w=tr.width/k, h=tr.height/k;
+  clue.classList.remove("zooming","open");
+  clue.style.transform=`translate(${x}px,${y}px) scale(${w/1920},${h/1080})`;
+  clue.hidden=false;
+  clue.getBoundingClientRect();
+  requestAnimationFrame(()=>{
+    clue.classList.add("zooming"); clue.style.transform="none";
+    setTimeout(()=>clue.classList.add("open"),20);
+  });
+  render();
+}
+
+function select(i){
+  if(S.locked) return;
+  const q=CATS[S.col].qs[S.level-1]; if(i>=q.o.length) return;
+  S.sel=i; SFX.tick();
+  document.querySelectorAll("#clue .ans").forEach(b=>b.classList.toggle("sel", +b.dataset.i===i));
+  $("#btnLock").disabled=false;
+  $("#lockHint").textContent=`${KEYS[i]}. Is that your final answer?`;
+}
+
+function lockIn(){
+  if(S.locked || S.sel===null) return;
+  S.locked=true;
+  const q=CATS[S.col].qs[S.level-1], sel=S.sel, ok = sel===q.a;
+  const btns=[...document.querySelectorAll("#clue .ans")];
+  btns.forEach(b=>b.disabled=true);
+  btns[sel].classList.add("suspense");
+  $("#btnLock").disabled=true; $("#lockHint").textContent="Locked in…";
+  setMusic("lock");
+  setTimeout(()=>{
+    btns[sel].classList.remove("suspense","sel");
+    btns[q.a].classList.add("right");
+    if(!ok) btns[sel].classList.add("wrong");
+    btns.forEach((b,i)=>{ if(i!==q.a && i!==sel) b.classList.add("dim"); });
+    const pts = ok ? PTS(S.level) : 0;
+    S.picks[S.col]={ level:S.level, sel, correct:ok, points:pts };
+    setMusic(null); flash(ok);
+    if(ok){ SFX.right(); setScore(S.score+pts); } else { SFX.wrong(); $("#clue .inner").classList.add("shake"); }
+    showVerdict(ok, pts, q);
+  }, 1400);
+}
+
+function showVerdict(ok, pts, q){
+  const last = S.col===4;
+  const v=$("#verdict");
+  $("#lockin").style.visibility="hidden";
+  v.className="verdict "+(ok?"ok":"no");
+  v.innerHTML=`
+    <div class="badge"><b>${ok?"+"+pts:"0"}</b><span>${ok?"Correct":"Not quite"}</span></div>
+    <div class="why"><small>${ok?"Why it's right":"The answer was "+KEYS[q.a]+": "+q.o[q.a]}</small><p style="${q.r.length>300?'font-size:22px':q.r.length>200?'font-size:24px':''}">${q.r}</p></div>
+    <button class="bigbtn go" id="btnNext">${last?"Final score":"Next gate"} →</button>`;
+  requestAnimationFrame(()=>v.classList.add("show"));
+  $("#btnNext").addEventListener("click", next);
+  setTimeout(()=>$("#btnNext").focus({preventScroll:true}),400);
+}
+
+let shrinkTimer=null;
+function next(){
+  if(S.phase!=="clue" || !S.locked) return;
+  const clue=$("#clue");
+  const doneCol=S.col;
+  S.col++;
+  if(S.col>=5){ setMusic(null); S.phase="end"; clue.hidden=true; render(); drawPaths(true); setTimeout(showEnd, 300); return; }
+  S.phase="board"; setMusic("board");
+  // shrink back into the chosen tile
+  const tile=$(`#c${doneCol}l${S.picks[doneCol].level} .tile`);
+  const st=stage.getBoundingClientRect(), tr=tile.getBoundingClientRect(), k=st.width/1920;
+  clue.classList.remove("open");
+  clue.style.transform=`translate(${(tr.left-st.left)/k}px,${(tr.top-st.top)/k}px) scale(${tr.width/k/1920},${tr.height/k/1080})`;
+  render(); drawPaths(true);
+  shrinkTimer=setTimeout(()=>{ clue.hidden=true; clue.classList.remove("zooming"); clue.style.transform=""; const f=board.querySelector(".cell.active .tile"); if(f) f.focus({preventScroll:true}); }, 560);
+}
+
+function flash(ok){ const f=$("#flash"); f.className=""; void f.offsetWidth; f.className=ok?"ok":"no"; }
+
+let shown=0, raf=null;
+function setScore(v, instant){
+  S.score=v; cancelAnimationFrame(raf);
+  const el=$("#score");
+  if(instant){ shown=v; el.textContent=v; return; }
+  const from=shown, t0=performance.now();
+  const stepF=t=>{ const p=Math.min(1,(t-t0)/700); shown=Math.round(from+(v-from)*(1-Math.pow(1-p,3))); el.textContent=shown; if(p<1) raf=requestAnimationFrame(stepF); };
+  raf=requestAnimationFrame(stepF);
+}
+
+function rankFor(s){
+  if(s===200) return ["Kingmaker","A perfect run. You read every room at its hardest."];
+  if(s>=150) return ["Power Broker","You know who really holds the cards, and you took the hard questions to prove it."];
+  if(s>=100) return ["Corridor Reader","You see past the org chart most of the time. Push one or two gates higher next round."];
+  if(s>=50)  return ["Org-Chart Tourist","The titles are still doing some of your thinking. Replay and aim higher."];
+  return ["Blindsided","Someone in Monitor just surprised you. Open the files again."];
+}
+
+function showEnd(){
+  const e=$("#end"), [rank,sub]=rankFor(S.score);
+  e.innerHTML=`
+    <div class="beams"></div>
+    <div class="kicker">Final score</div>
+    <div class="final"><b id="finalNum">0</b><span>/ 200</span></div>
+    <div class="rank" style="color:${S.score>=150?'var(--gold)':S.score>=100?'var(--ink)':'var(--orange)'}">${rank}</div>
+    <p class="rank-sub">${sub}</p>
+    <div class="recap">${S.picks.map((p,c)=>{
+      const q=CATS[c].qs[p.level-1];
+      return `<div class="rc ${p.correct?'ok':'no'}">
+        <small>Gate ${c+1} · Level ${p.level}</small>
+        <h3>${CATS[c].name}</h3>
+        <p>${p.correct?"Answered: ":"Correct answer: "}${KEYS[q.a]}. ${q.o[q.a]}</p>
+        <div class="row"><span style="color:${p.correct?'var(--good)':'var(--bad)'}">${p.correct?"Correct":"Missed"}</span><b>${p.points}</b></div>
+      </div>`;}).join("")}</div>
+    <div class="end-actions"><button class="bigbtn ghost" id="btnBoard">View path</button><button class="bigbtn" id="btnAgain">Play again</button></div>`;
+  e.hidden=false;
+  $("#btnAgain").addEventListener("click", start);
+  $("#btnBoard").addEventListener("click", ()=>{ e.hidden=true; showBoardReview(); });
+  SFX.fanfare();
+  const el=$("#finalNum"), t0=performance.now(), target=S.score;
+  const step=t=>{ const p=Math.min(1,(t-t0)/1600); el.textContent=Math.round(target*(1-Math.pow(1-p,3))); if(p<1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+  setTimeout(()=>$("#btnAgain").focus({preventScroll:true}),300);
+}
+function showBoardReview(){
+  const g=$("#gatePanel");
+  g.innerHTML=`<div class="eyebrow">Path complete</div><h2>Your route through the files</h2><div class="cat">${S.score} of 200</div>
+   <div class="hint">The orange line traces the level you chose at each gate.</div>
+   <button class="bigbtn" style="margin-top:auto;font-size:24px;padding:16px 28px" id="btnBack">Back to score</button>`;
+  $("#btnBack").addEventListener("click", ()=>{ $("#end").hidden=false; });
+}
+
+/* ===== Keyboard ===== */
+addEventListener("keydown", e=>{
+  if(e.metaKey||e.ctrlKey||e.altKey) return;
+  const k=e.key.toLowerCase();
+  if(k==="f"){ toggleFull(); return; }
+  if(S.phase==="title" && (k==="enter"||k===" ")){ e.preventDefault(); start(); return; }
+  if(S.phase==="board" && /^[1-5]$/.test(k)){ const t=$(`#c${S.col}l${k} .tile`); choose(+k, t); return; }
+  if(S.phase==="clue"){
+    if(!S.locked){
+      const map={a:0,b:1,c:2,d:3,"1":0,"2":1,"3":2,"4":3};
+      if(k in map){ select(map[k]); return; }
+      if(k==="enter" && S.sel!==null){ e.preventDefault(); lockIn(); return; }
+    } else if(k==="enter" && $("#btnNext")){ e.preventDefault(); next(); }
+  }
+});
+
+$("#btnStart").addEventListener("click", start);
+$("#btnRestart").addEventListener("click", ()=>{ setMusic(null);
+  S=fresh(); setScore(0,true);
+  $("#clue").hidden=true; $("#end").hidden=true; $("#title").hidden=false;
+  render();
+});
+
+$("#btnMusic").addEventListener("click", ()=>{ musicOn=!musicOn; setMusIcon(); try{localStorage.setItem("sf-music",musicOn?"1":"0")}catch(e){} ac(); musBus(); refreshMusicVolume(); });
+setMusIcon();
+
+/* ===== Boot ===== */
+function boot(data){
+  buildBoard(); fit();
+  if(data && data.state && data.state.phase==="board"){ S=Object.assign(fresh(), data.state); $("#title").hidden=true; setScore(S.score,true); }
+  render();
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>{ fit(); drawPaths(); });
+  addEventListener("resize", ()=>drawPaths());
+}
+window.claude?.hot?.snapshot?.(()=>({ state: S.phase==="board" ? {phase:S.phase,col:S.col,picks:S.picks,score:S.score} : null }));
+window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.hot?.data ?? {});
+})();
+</script>
